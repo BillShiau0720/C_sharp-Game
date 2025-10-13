@@ -11,24 +11,172 @@
         Background="{DynamicResource SystemControlAcrylicWindowBrush}">
 
     <Grid>
+        <!-- ===== 劇情遊戲層 ===== -->
+        <Grid x:Name="GameLayer"
+              Visibility="Collapsed"
+              Panel.ZIndex="20">
+            <Grid>
+                <Image x:Name="StoryBackgroundImage"
+                       Stretch="UniformToFill"
+                       Panel.ZIndex="0"/>
+
+                <Border Background="#55000000"
+                        Panel.ZIndex="1"/>
+
+                <Image x:Name="StoryCharacterImage"
+                       Panel.ZIndex="2"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Bottom"
+                       Margin="0,0,80,200"
+                       Width="420"
+                       Stretch="Uniform"/>
+
+                <Border Panel.ZIndex="3"
+                        Background="#CC101520"
+                        BorderBrush="#55FFFFFF"
+                        BorderThickness="1.4"
+                        CornerRadius="28"
+                        Margin="80,0,80,60"
+                        VerticalAlignment="Bottom"
+                        Padding="32,28">
+                    <StackPanel>
+                        <TextBlock x:Name="StoryTitleText"
+                                   FontSize="24"
+                                   FontWeight="SemiBold"
+                                   Foreground="#FFD7E1F9"
+                                   Margin="0,0,0,12"/>
+                        <TextBlock x:Name="StorySpeakerText"
+                                   FontSize="20"
+                                   FontWeight="SemiBold"
+                                   Foreground="#FFFFFFFF"
+                                   Margin="0,0,0,8"/>
+                        <TextBlock x:Name="StoryDialogueText"
+                                   FontSize="20"
+                                   Foreground="#FFF2F6FF"
+                                   Opacity="0.92"
+                                   TextWrapping="Wrap"
+                                   LineHeight="30"
+                                   Margin="0,0,0,16"/>
+                        <TextBlock x:Name="StoryStatusText"
+                                   FontSize="16"
+                                   Foreground="#FFA0B4D7"
+                                   Margin="0,0,0,16"
+                                   Visibility="Collapsed"/>
+                        <StackPanel x:Name="StoryChoicesPanel"
+                                    Margin="0,0,0,12"/>
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Right">
+                            <Button x:Name="StoryNextButton"
+                                    Content="下一句"
+                                    Padding="20,10"
+                                    FontSize="18"
+                                    Margin="0,0,16,0"
+                                    MinWidth="140"
+                                    Click="StoryNextButton_Click"/>
+                            <Button x:Name="StoryBackButton"
+                                    Content="返回主選單"
+                                    Padding="20,10"
+                                    FontSize="18"
+                                    MinWidth="160"
+                                    Click="StoryBackButton_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- ===== 主畫面層 ===== -->
+        <Grid x:Name="MainMenuLayer"
+              Panel.ZIndex="10">
+            <!-- ===== 主畫面 ===== -->
+            <Rectangle Panel.ZIndex="1" Opacity="1">
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#FF1E1E2E" Offset="0"/>
+                        <GradientStop Color="#FF2A3B5A" Offset="1"/>
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+
+            <!-- 影片背景 -->
+            <Border x:Name="VideoArea"
+             Width="1455" Height="797"
+             Panel.ZIndex="5"
+             HorizontalAlignment="Left"
+             VerticalAlignment="Top" BorderThickness="2" Margin="36,172,0,0"/>
+
+            <!-- 左上 Logo / Title -->
+            <StackPanel Panel.ZIndex="2" Orientation="Vertical" Margin="36,36,0,0"
+              HorizontalAlignment="Left" VerticalAlignment="Top" Height="126" Width="579">
+                <TextBlock Text="仙劍豹貓傳" FontSize="60" FontWeight="SemiBold" Foreground="White" Opacity="0.95"/>
+                <TextBlock Text="執子之手，與子偕老；願共對清風朗月，長伴此生。" FontSize="24" Foreground="White" Opacity="0.75"/>
+            </StackPanel>
+
+            <!-- 右側主選單卡片 -->
+            <Border Panel.ZIndex="2" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1510,387,0,0"
+          Background="#66000000" CornerRadius="20" Padding="24" Width="400">
+                <StackPanel>
+                    <TextBlock Text="主選單" FontSize="32" Foreground="White" Margin="0,0,0,12"/>
+                    <Separator Margin="0,0,0,8"/>
+                    <Button  FontSize="26" Style="{StaticResource MenuButton}" Click="StartGame_Click">
+                        <AccessText Text="_開始遊戲"/>
+                    </Button>
+                    <Button FontSize="26" Style="{StaticResource MenuButton}" Click="LoadGame_Click">
+                        <AccessText Text="_載入遊戲"/>
+                    </Button>
+                    <Button FontSize="26" Style="{StaticResource MenuButton}" Click="OpenSettings_Click">
+                        <AccessText Text="_設定"/>
+                    </Button>
+                    <Separator Margin="0,12,0,4"/>
+                    <TextBlock Foreground="White" Opacity="0.7" FontSize="16"
+                 Text="提示：Enter 確認，Esc 離開，F11 全螢幕。"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 中下版本資訊 -->
+            <StackPanel Panel.ZIndex="1" Orientation="Vertical" Margin="0,1004,0,0"
+              HorizontalAlignment="Center" VerticalAlignment="Top" Height="51" Width="488">
+                <TextBlock Text="Ver 1.0" FontSize="20" FontWeight="SemiBold" Foreground="White" Opacity="0.95"
+               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <TextBlock Text="BillShiau | WPF .NET 9" FontSize="10" Foreground="White" Opacity="0.75"
+               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!--提示詞-->
+            <TextBlock Text="測試版本，非正式畫面。"  FontSize="24" Foreground="White" Opacity="0.9" Margin="1500,1000,0,0" VerticalAlignment="Top">
+            </TextBlock>
+
+            <!--標題圖片-->
+            <Image Panel.ZIndex="3" HorizontalAlignment="Left" Height="64" Margin="20,45,0,0" VerticalAlignment="Top" Width="58" Source="/Assets/Image/Sword.png" RenderTransformOrigin="0.5,0.5">
+                <Image.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform/>
+                        <SkewTransform/>
+                        <RotateTransform Angle="-108.579"/>
+                        <TranslateTransform/>
+                    </TransformGroup>
+                </Image.RenderTransform>
+            </Image>
+        </Grid>
+
         <!-- ===== 載入存檔 Popup ===== -->
         <Grid x:Name="LoadPopup"
-      Visibility="Visible"
-      Panel.ZIndex="99"
-      IsHitTestVisible="True">
+              Visibility="Collapsed"
+              Panel.ZIndex="99"
+              IsHitTestVisible="True">
             <!-- 更深的遮罩：80% 黑，確保底層幾乎看不見 -->
             <Rectangle Fill="#CC000000"/>
             <!-- #CC = 80% 透明度 -->
 
             <!-- 置中主卡片 -->
             <Border Width="1020"
-          CornerRadius="20"
-          Padding="24"
-          Background="#F0151E2E"   
-          BorderBrush="#66FFFFFF"
-          BorderThickness="1.2"
-          HorizontalAlignment="Center"
-          VerticalAlignment="Center" Cursor="">
+              CornerRadius="20"
+              Padding="24"
+              Background="#F0151E2E"
+              BorderBrush="#66FFFFFF"
+              BorderThickness="1.2"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center" Cursor="">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -150,7 +298,7 @@
                             </Grid>
                         </Border>
 
-                        <!-- Slot 2（示例：有存檔） -->
+                        <!-- Slot 2 -->
                         <Border Style="{StaticResource SaveSlotCard}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -176,7 +324,7 @@
                             </Grid>
                         </Border>
 
-                        <!-- Slot 3（示例：空存檔） -->
+                        <!-- Slot 3 -->
                         <Border Style="{StaticResource SaveSlotCard}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -269,76 +417,5 @@
                 </StackPanel>
             </Border>
         </Grid>
-
-        <!-- ===== 主畫面 ===== -->
-        <Rectangle Panel.ZIndex="1" Opacity="1">
-            <Rectangle.Fill>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#FF1E1E2E" Offset="0"/>
-                    <GradientStop Color="#FF2A3B5A" Offset="1"/>
-                </LinearGradientBrush>
-            </Rectangle.Fill>
-        </Rectangle>
-
-        <!-- 影片背景 -->
-        <Border x:Name="VideoArea"
-             Width="1455" Height="797"
-             Panel.ZIndex="5"
-             HorizontalAlignment="Left"
-             VerticalAlignment="Top" BorderThickness="2" Margin="36,172,0,0"/>
-
-        <!-- 左上 Logo / Title -->
-        <StackPanel Panel.ZIndex="2" Orientation="Vertical" Margin="36,36,0,0"
-              HorizontalAlignment="Left" VerticalAlignment="Top" Height="126" Width="579">
-            <TextBlock Text="仙劍豹貓傳" FontSize="60" FontWeight="SemiBold" Foreground="White" Opacity="0.95"/>
-            <TextBlock Text="執子之手，與子偕老；願共對清風朗月，長伴此生。" FontSize="24" Foreground="White" Opacity="0.75"/>
-        </StackPanel>
-
-        <!-- 右側主選單卡片 -->
-        <Border Panel.ZIndex="2" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1510,387,0,0"
-          Background="#66000000" CornerRadius="20" Padding="24" Width="400">
-            <StackPanel>
-                <TextBlock Text="主選單" FontSize="32" Foreground="White" Margin="0,0,0,12"/>
-                <Separator Margin="0,0,0,8"/>
-                <Button  FontSize="26" Style="{StaticResource MenuButton}" Click="StartGame_Click">
-                    <AccessText Text="_開始遊戲"/>
-                </Button>
-                <Button FontSize="26" Style="{StaticResource MenuButton}" Click="LoadGame_Click">
-                    <AccessText Text="_載入遊戲"/>
-                </Button>
-                <Button FontSize="26" Style="{StaticResource MenuButton}" Click="OpenSettings_Click">
-                    <AccessText Text="_設定"/>
-                </Button>
-                <Separator Margin="0,12,0,4"/>
-                <TextBlock Foreground="White" Opacity="0.7" FontSize="16"
-                 Text="提示：Enter 確認，Esc 離開，F11 全螢幕。"/>
-            </StackPanel>
-        </Border>
-
-        <!-- 中下版本資訊 -->
-        <StackPanel Panel.ZIndex="1" Orientation="Vertical" Margin="0,1004,0,0"
-              HorizontalAlignment="Center" VerticalAlignment="Top" Height="51" Width="488">
-            <TextBlock Text="Ver 1.0" FontSize="20" FontWeight="SemiBold" Foreground="White" Opacity="0.95"
-               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-            <TextBlock Text="BillShiau | WPF .NET 9" FontSize="10" Foreground="White" Opacity="0.75"
-               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </StackPanel>
-
-        <!--提示詞-->
-        <TextBlock Text="測試版本，非正式畫面。"  FontSize="24" Foreground="White" Opacity="0.9" Margin="1500,1000,0,0" VerticalAlignment="Top">
-        </TextBlock>
-
-        <!--標題圖片-->
-        <Image Panel.ZIndex="3" HorizontalAlignment="Left" Height="64" Margin="20,45,0,0" VerticalAlignment="Top" Width="58" Source="/Assets/Image/Sword.png" RenderTransformOrigin="0.5,0.5">
-            <Image.RenderTransform>
-                <TransformGroup>
-                    <ScaleTransform/>
-                    <SkewTransform/>
-                    <RotateTransform Angle="-108.579"/>
-                    <TranslateTransform/>
-                </TransformGroup>
-            </Image.RenderTransform>
-        </Image>
-
     </Grid>
 </Window>

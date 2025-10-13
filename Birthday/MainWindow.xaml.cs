@@ -1,4 +1,5 @@
 ﻿using Birthday.Services;
+using Birthday.Story;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -30,13 +31,17 @@ namespace Birthday
         private Rect _prevBounds;
 
         private MediaPlayer _mediaPlayer;
+        private StoryService? _storyService;
+        private bool _isStoryRunning;
 
         public MainWindow()
         {
             InitializeComponent();
 
             this.KeyDown += MainWindow_KeyDown;
-     
+
+            InitializeStorySystem();
+
             //訂閱開啟事件
             Loaded += (_, __) =>
             {
@@ -127,6 +132,10 @@ namespace Birthday
             else if (e.Key == Key.Escape && LoadPopup.Visibility == Visibility.Visible)
             {
                 LoadPopup.Visibility = Visibility.Collapsed;
+            }
+            else if (e.Key == Key.Escape && GameLayer.Visibility == Visibility.Visible)
+            {
+                ReturnToMainMenu();
             }
             else if (e.Key == Key.Escape)
             {
@@ -242,13 +251,7 @@ namespace Birthday
         private void StartGame_Click(object sender, RoutedEventArgs e)
         {
             Trace.WriteLine("Start game clicked.");
-            // TODO: 開啟你的遊戲場景視窗或切換頁面
-            /*
-            var game = new GameWindow();   // 先做個占位視窗
-            game.Owner = this;
-            game.Show();
-            this.Hide();
-            */
+            StartStory();
         }
 
         private void LoadGame_Click(object sender, RoutedEventArgs e)
@@ -337,6 +340,189 @@ namespace Birthday
 
         }
 
+        private void InitializeStorySystem()
+        {
+            _storyService = StoryService.CreateDemoStory();
+            _storyService.StepChanged += StoryService_StepChanged;
+            _storyService.StoryCompleted += StoryService_StoryCompleted;
+            ResetStoryUi();
+        }
 
+        private void StartStory()
+        {
+            if (_storyService == null)
+            {
+                InitializeStorySystem();
+            }
+
+            SettingsPopup.Visibility = Visibility.Collapsed;
+            LoadPopup.Visibility = Visibility.Collapsed;
+            ResetStoryUi();
+            ShowGameLayer();
+            _storyService?.Start();
+        }
+
+        private void ShowGameLayer()
+        {
+            GameLayer.Visibility = Visibility.Visible;
+            MainMenuLayer.Visibility = Visibility.Collapsed;
+            _isStoryRunning = true;
+        }
+
+        private void ReturnToMainMenu()
+        {
+            GameLayer.Visibility = Visibility.Collapsed;
+            MainMenuLayer.Visibility = Visibility.Visible;
+            _isStoryRunning = false;
+            ResetStoryUi();
+        }
+
+        private void StoryNextButton_Click(object sender, RoutedEventArgs e)
+        {
+            _storyService?.Continue();
+        }
+
+        private void StoryBackButton_Click(object sender, RoutedEventArgs e)
+        {
+            ReturnToMainMenu();
+        }
+
+        private void StoryChoiceButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag is string nextId)
+            {
+                _storyService?.Choose(nextId);
+            }
+        }
+
+        private void StoryService_StepChanged(StoryStep step)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                ApplyStoryStep(step);
+            });
+        }
+
+        private void StoryService_StoryCompleted()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _isStoryRunning = false;
+                StoryChoicesPanel.Children.Clear();
+                StoryNextButton.Visibility = Visibility.Visible;
+                StoryNextButton.IsEnabled = false;
+                StoryNextButton.Content = "劇情完結";
+                StoryStatusText.Text = "序章告一段落，返回主選單以繼續冒險。";
+                StoryStatusText.Visibility = Visibility.Visible;
+                StorySpeakerText.Text = "系統";
+                StoryDialogueText.Text = "感謝遊玩，敬請期待更多內容。";
+
+                StoryCharacterImage.Source = null;
+            });
+        }
+
+        private void ApplyStoryStep(StoryStep step)
+        {
+            StoryTitleText.Text = step.Title ?? string.Empty;
+            StorySpeakerText.Text = string.IsNullOrWhiteSpace(step.CharacterName) ? "旁白" : step.CharacterName;
+            StoryDialogueText.Text = step.Dialogue ?? string.Empty;
+            StoryStatusText.Visibility = Visibility.Collapsed;
+            StoryStatusText.Text = string.Empty;
+
+            UpdateImageSource(StoryBackgroundImage, step.BackgroundImage);
+            UpdateImageSource(StoryCharacterImage, step.CharacterImage);
+
+            RenderStoryChoices(step);
+        }
+
+        private void RenderStoryChoices(StoryStep step)
+        {
+            StoryChoicesPanel.Children.Clear();
+
+            if (step.Choices.Count > 0)
+            {
+                StoryNextButton.Visibility = Visibility.Collapsed;
+                StoryStatusText.Text = "請選擇下一步行動";
+                StoryStatusText.Visibility = Visibility.Visible;
+
+                foreach (var choice in step.Choices)
+                {
+                    var button = new Button
+                    {
+                        Content = choice.Text,
+                        Padding = new Thickness(18, 10, 18, 10),
+                        Margin = new Thickness(0, 6, 0, 0),
+                        FontSize = 16,
+                        MinWidth = 240,
+                        Tag = choice.NextId
+                    };
+                    button.Click += StoryChoiceButton_Click;
+                    StoryChoicesPanel.Children.Add(button);
+                }
+            }
+            else
+            {
+                StoryStatusText.Visibility = Visibility.Collapsed;
+                StoryNextButton.Visibility = Visibility.Visible;
+                StoryNextButton.IsEnabled = true;
+                StoryNextButton.Content = step.IsFinal ? "劇情完結" : "下一句";
+            }
+        }
+
+        private void ResetStoryUi()
+        {
+            StoryTitleText.Text = string.Empty;
+            StorySpeakerText.Text = string.Empty;
+            StoryDialogueText.Text = string.Empty;
+            StoryStatusText.Text = string.Empty;
+            StoryStatusText.Visibility = Visibility.Collapsed;
+            StoryChoicesPanel.Children.Clear();
+            StoryNextButton.Visibility = Visibility.Visible;
+            StoryNextButton.IsEnabled = true;
+            StoryNextButton.Content = "下一句";
+            StoryBackgroundImage.Source = null;
+            StoryCharacterImage.Source = null;
+        }
+
+        private void UpdateImageSource(Image target, string? relativePath)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(relativePath))
+            {
+                target.Source = null;
+                return;
+            }
+
+            var normalized = relativePath.Replace('/', System.IO.Path.DirectorySeparatorChar);
+            var absolutePath = System.IO.Path.Combine(AppContext.BaseDirectory, normalized);
+
+            if (!File.Exists(absolutePath))
+            {
+                Trace.WriteLine($"[Story] Missing asset: {absolutePath}");
+                target.Source = null;
+                return;
+            }
+
+            try
+            {
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.UriSource = new Uri(absolutePath, UriKind.Absolute);
+                bitmap.EndInit();
+                bitmap.Freeze();
+
+                target.Source = bitmap;
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[Story] Failed to load image: {ex.Message}");
+                target.Source = null;
+            }
+        }
     }
 }
