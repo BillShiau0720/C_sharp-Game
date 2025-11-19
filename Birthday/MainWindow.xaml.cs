@@ -38,6 +38,7 @@ namespace Birthday
         private DispatcherTimer? _typewriterTimer;
         private int _typewriterIndex;
         private string _currentFullDialogue = string.Empty;
+        private TextBlock? _currentDialogueTarget;
         private bool _isTypewriting;
         private bool _isStoryMenuOpen;
         public MainWindow()
@@ -424,6 +425,16 @@ namespace Birthday
             _storyService?.Continue();
         }
 
+        private void BattleNextButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (FinishTypewriterEarly())
+            {
+                return;
+            }
+
+            _storyService?.Continue();
+        }
+
         private void StorySaveButton_Click(object sender, RoutedEventArgs e)
         {
             if (FinishTypewriterEarly())
@@ -538,7 +549,11 @@ namespace Birthday
                 StopTypewriterEffect();
                 _currentFullDialogue = string.Empty;
                 _typewriterIndex = 0;
+                _currentDialogueTarget = null;
                 _isStoryRunning = false;
+                StoryLayout.Visibility = Visibility.Visible;
+                BattleLayout.Visibility = Visibility.Collapsed;
+
                 StoryChoicesPanel.Children.Clear();
                 StoryNextButton.Visibility = Visibility.Visible;
                 StoryNextButton.IsEnabled = false;
@@ -547,16 +562,37 @@ namespace Birthday
                 StoryStatusText.Visibility = Visibility.Visible;
                 StorySpeakerText.Text = "系統";
                 StoryDialogueText.Text = "Need to add money system";
-
                 StoryCharacterImage.Source = null;
+                BattleChoicesPanel.Children.Clear();
+                BattleNextButton.Visibility = Visibility.Visible;
+                BattleNextButton.IsEnabled = false;
             });
         }
 
         private void ApplyStoryStep(StoryStep step)
         {
+            StoryLayout.Visibility = step.UseBattleLayout ? Visibility.Collapsed : Visibility.Visible;
+            BattleLayout.Visibility = step.UseBattleLayout ? Visibility.Visible : Visibility.Collapsed;
+
+            StopTypewriterEffect();
+            _currentFullDialogue = string.Empty;
+            _typewriterIndex = 0;
+
+            if (step.UseBattleLayout)
+            {
+                ApplyBattleStep(step);
+            }
+            else
+            {
+                ApplyNarrativeStep(step);
+            }
+        }
+
+        private void ApplyNarrativeStep(StoryStep step)
+        {
             StoryTitleText.Text = step.Title ?? string.Empty;
             StorySpeakerText.Text = string.IsNullOrWhiteSpace(step.CharacterName) ? "旁白" : step.CharacterName;
-            StartTypewriter(step.Dialogue ?? string.Empty);
+            StartTypewriter(step.Dialogue ?? string.Empty, StoryDialogueText);
             StoryStatusText.Visibility = Visibility.Collapsed;
             StoryStatusText.Text = string.Empty;
 
@@ -565,6 +601,26 @@ namespace Birthday
 
             RenderStoryChoices(step);
         }
+
+        private void ApplyBattleStep(StoryStep step)
+        {
+            BattleTitleText.Text = step.Title ?? string.Empty;
+            BattleSpeakerText.Text = string.IsNullOrWhiteSpace(step.CharacterName) ? "旁白" : step.CharacterName;
+            BattlePromptText.Text = step.BattlePrompt ?? string.Empty;
+            BattlePlayerStatusText.Text = step.PlayerStatus ?? string.Empty;
+            BattleAllyStatusText.Text = step.AllyStatus ?? string.Empty;
+            BattleEnemyStatusText.Text = step.EnemyStatus ?? string.Empty;
+
+            StartTypewriter(step.Dialogue ?? string.Empty, BattleDialogueText);
+
+            UpdateImageSource(BattleBackgroundImage, step.BackgroundImage);
+            UpdateImageSource(BattlePlayerAvatar, step.PlayerAvatar ?? step.CharacterImage);
+            UpdateImageSource(BattleAllyAvatar, step.AllyAvatar);
+            UpdateImageSource(BattleEnemyAvatar, step.EnemyAvatar ?? step.CharacterImage);
+
+            RenderBattleChoices(step);
+        }
+
 
         private void RenderStoryChoices(StoryStep step)
         {
@@ -606,6 +662,46 @@ namespace Birthday
                 StoryNextButton.Visibility = Visibility.Visible;
                 StoryNextButton.IsEnabled = true;
                 StoryNextButton.Content = step.IsFinal ? "劇情完結" : "下一句";
+            }
+        }
+
+        private void RenderBattleChoices(StoryStep step)
+        {
+            BattleChoicesPanel.Children.Clear();
+
+            if (step.Choices.Count > 0)
+            {
+                BattleNextButton.Visibility = Visibility.Collapsed;
+
+                var choiceStyle = TryFindResource("StoryChoiceButtonStyle") as Style;
+
+                for (int i = 0; i < step.Choices.Count; i++)
+                {
+                    var choice = step.Choices[i];
+                    var button = new Button
+                    {
+                        Margin = new Thickness(0, i == 0 ? 0 : 10, 0, 0),
+                        MinWidth = 240,
+                        Tag = choice.NextId,
+                        Cursor = Cursors.Hand,
+                        HorizontalAlignment = HorizontalAlignment.Stretch
+                    };
+
+                    if (choiceStyle != null)
+                    {
+                        button.Style = choiceStyle;
+                    }
+
+                    button.Content = CreateChoiceContent(i + 1, choice.Text ?? string.Empty);
+                    button.Click += StoryChoiceButton_Click;
+                    BattleChoicesPanel.Children.Add(button);
+                }
+            }
+            else
+            {
+                BattleNextButton.Visibility = Visibility.Visible;
+                BattleNextButton.IsEnabled = true;
+                BattleNextButton.Content = step.IsFinal ? "劇情完結" : "下一句";
             }
         }
 
@@ -665,6 +761,9 @@ namespace Birthday
             _currentFullDialogue = string.Empty;
             _typewriterIndex = 0;
             _isTypewriting = false;
+            _currentDialogueTarget = null;
+            StoryLayout.Visibility = Visibility.Visible;
+            BattleLayout.Visibility = Visibility.Collapsed;
             StoryTitleText.Text = string.Empty;
             StorySpeakerText.Text = string.Empty;
             StoryDialogueText.Text = string.Empty;
@@ -676,23 +775,47 @@ namespace Birthday
             StoryNextButton.Content = "下一句";
             StoryBackgroundImage.Source = null;
             StoryCharacterImage.Source = null;
+            BattleTitleText.Text = string.Empty;
+            BattlePromptText.Text = string.Empty;
+            BattleSpeakerText.Text = string.Empty;
+            BattleDialogueText.Text = string.Empty;
+            BattlePlayerStatusText.Text = string.Empty;
+            BattleAllyStatusText.Text = string.Empty;
+            BattleEnemyStatusText.Text = string.Empty;
+            BattleChoicesPanel.Children.Clear();
+            BattleNextButton.Visibility = Visibility.Visible;
+            BattleNextButton.IsEnabled = true;
+            BattleNextButton.Content = "下一句";
+            BattleBackgroundImage.Source = null;
+            BattlePlayerAvatar.Source = null;
+            BattleAllyAvatar.Source = null;
+            BattleEnemyAvatar.Source = null;
             CollapseStoryMenu();
         }
 
-        private void StartTypewriter(string text)
+        private void StartTypewriter(string text, TextBlock target)
         {
             _currentFullDialogue = text ?? string.Empty;
             _typewriterIndex = 0;
             StopTypewriterEffect();
+            _currentDialogueTarget = target;
 
             if (string.IsNullOrEmpty(_currentFullDialogue))
             {
-                StoryDialogueText.Text = string.Empty;
+                if (_currentDialogueTarget != null)
+                {
+                    _currentDialogueTarget.Text = string.Empty;
+                }
+
                 _isTypewriting = false;
+                _currentDialogueTarget = null;
                 return;
             }
 
-            StoryDialogueText.Text = string.Empty;
+            if (_currentDialogueTarget != null)
+            {
+                _currentDialogueTarget.Text = string.Empty;
+            }
             _isTypewriting = true;
 
             _typewriterTimer = new DispatcherTimer
@@ -702,13 +825,12 @@ namespace Birthday
             _typewriterTimer.Tick += TypewriterTimer_Tick;
             _typewriterTimer.Start();
         }
-
         private void TypewriterTimer_Tick(object? sender, EventArgs e)
         {
-            if (_typewriterIndex < _currentFullDialogue.Length)
+            if (_typewriterIndex < _currentFullDialogue.Length && _currentDialogueTarget != null)
             {
                 _typewriterIndex++;
-                StoryDialogueText.Text = _currentFullDialogue.Substring(0, _typewriterIndex);
+                _currentDialogueTarget.Text = _currentFullDialogue.Substring(0, _typewriterIndex);
             }
 
             if (_typewriterIndex >= _currentFullDialogue.Length)
@@ -716,12 +838,15 @@ namespace Birthday
                 CompleteTypewriter();
             }
         }
-
         private void CompleteTypewriter()
         {
             StopTypewriterEffect();
-            StoryDialogueText.Text = _currentFullDialogue;
+            if (_currentDialogueTarget != null)
+            {
+                _currentDialogueTarget.Text = _currentFullDialogue;
+            }
             _isTypewriting = false;
+            _currentDialogueTarget = null;
         }
 
         private bool FinishTypewriterEarly()
