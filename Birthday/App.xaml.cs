@@ -28,7 +28,7 @@ namespace Birthday
             IniFiles loadSet = new IniFiles(LoadSetini);
             if (!System.IO.File.Exists(LoadSetini))    
             {
-                //建立預設設定值
+                //建立預設設定值(LastSaveTime必須空白)
                 loadSet.IniWriteValue("Save1", "Level", "1");
                 loadSet.IniWriteValue("Save1","Chapter","0");
                 loadSet.IniWriteValue("Save1","Money","0");

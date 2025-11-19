@@ -1,6 +1,7 @@
 ﻿using Birthday.Services;
 using Birthday.Story;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -14,6 +15,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using TSRC_Overview;
 
 namespace Birthday
@@ -33,7 +35,11 @@ namespace Birthday
         private MediaPlayer _mediaPlayer;
         private StoryService? _storyService;
         private bool _isStoryRunning;
-
+        private DispatcherTimer? _typewriterTimer;
+        private int _typewriterIndex;
+        private string _currentFullDialogue = string.Empty;
+        private bool _isTypewriting;
+        private bool _isStoryMenuOpen;
         public MainWindow()
         {
             InitializeComponent();
@@ -256,6 +262,11 @@ namespace Birthday
 
         private void LoadGame_Click(object sender, RoutedEventArgs e)
         {
+            ShowSaveManager();
+        }
+
+        private void ShowSaveManager()
+        {
             Trace.WriteLine("Loading save...");
             LoadPopup.Visibility = Visibility.Visible;
 
@@ -273,6 +284,8 @@ namespace Birthday
                 Save1_LastSaveTime.Text = "";
                 Save1_BtnLoad.IsEnabled = false;
                 Save1_BtnDelete.IsEnabled = false;
+                Save1_BtnLoad.Visibility = Visibility.Collapsed;
+                Save1_BtnDelete.Visibility = Visibility.Collapsed;
             }
             else
             {
@@ -284,6 +297,8 @@ namespace Birthday
                 Save1_LastSaveTime.Text = Save1_LastSaveTimeF;
                 Save1_BtnLoad.IsEnabled = true;
                 Save1_BtnDelete.IsEnabled = true;
+                Save1_BtnLoad.Visibility = Visibility.Visible;
+                Save1_BtnDelete.Visibility = Visibility.Visible;
             }
 
             // Slot 2
@@ -295,6 +310,8 @@ namespace Birthday
                 Save2_LastSaveTime.Text = "";
                 Save2_BtnLoad.IsEnabled = false;
                 Save2_BtnDelete.IsEnabled = false;
+                Save2_BtnLoad.Visibility = Visibility.Collapsed;
+                Save2_BtnDelete.Visibility = Visibility.Collapsed;
             }
             else
             {
@@ -306,6 +323,8 @@ namespace Birthday
                 Save2_LastSaveTime.Text = Save2_LastSaveTimeF;
                 Save2_BtnLoad.IsEnabled = true;
                 Save2_BtnDelete.IsEnabled = true;
+                Save2_BtnLoad.Visibility = Visibility.Visible;
+                Save2_BtnDelete.Visibility = Visibility.Visible;
             }
 
             // Slot 3
@@ -317,6 +336,8 @@ namespace Birthday
                 Save3_LastSaveTime.Text = "";
                 Save3_BtnLoad.IsEnabled = false;
                 Save3_BtnDelete.IsEnabled = false;
+                Save3_BtnLoad.Visibility = Visibility.Collapsed;
+                Save3_BtnDelete.Visibility = Visibility.Collapsed;
             }
             else
             {
@@ -328,6 +349,8 @@ namespace Birthday
                 Save3_LastSaveTime.Text = Save3_LastSaveTimeF;
                 Save3_BtnLoad.IsEnabled = true;
                 Save3_BtnDelete.IsEnabled = true;
+                Save3_BtnLoad.Visibility = Visibility.Visible;
+                Save3_BtnDelete.Visibility = Visibility.Visible;
             }
 
             Trace.WriteLine("Loaded save compelet.");
@@ -377,18 +400,123 @@ namespace Birthday
             ResetStoryUi();
         }
 
+        private void StoryMenuToggleButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isStoryMenuOpen)
+            {
+                CollapseStoryMenu();
+            }
+            else
+            {
+                ExpandStoryMenu();
+            }
+
+            e.Handled = true;
+        }
+
         private void StoryNextButton_Click(object sender, RoutedEventArgs e)
         {
+            if (FinishTypewriterEarly())
+            {
+                return;
+            }
+
             _storyService?.Continue();
+        }
+
+        private void StorySaveButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (FinishTypewriterEarly())
+            {
+                return;
+            }
+
+            ShowSaveManager();
+            CollapseStoryMenu();
         }
 
         private void StoryBackButton_Click(object sender, RoutedEventArgs e)
         {
             ReturnToMainMenu();
+            CollapseStoryMenu();
+        }
+
+        private void GameLayer_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isStoryMenuOpen)
+            {
+                return;
+            }
+
+            if (StoryMenuContainer == null)
+            {
+                return;
+            }
+
+            if (e.OriginalSource is DependencyObject source && IsDescendantOf(source, StoryMenuContainer))
+            {
+                return;
+            }
+
+            CollapseStoryMenu();
+        }
+
+        private void ExpandStoryMenu()
+        {
+            if (StoryMenuButtonsPanel == null || StoryMenuToggleButton == null)
+            {
+                return;
+            }
+
+            StoryMenuButtonsPanel.Visibility = Visibility.Visible;
+            StoryMenuToggleButton.Content = "▲ 劇情選單";
+            _isStoryMenuOpen = true;
+        }
+
+        private void CollapseStoryMenu()
+        {
+            if (StoryMenuButtonsPanel == null || StoryMenuToggleButton == null)
+            {
+                _isStoryMenuOpen = false;
+                return;
+            }
+
+            StoryMenuButtonsPanel.Visibility = Visibility.Collapsed;
+            StoryMenuToggleButton.Content = "☰ 劇情選單";
+            _isStoryMenuOpen = false;
+        }
+
+        private static bool IsDescendantOf(DependencyObject? source, DependencyObject ancestor)
+        {
+            DependencyObject? current = source;
+
+            while (current != null)
+            {
+                if (current == ancestor)
+                {
+                    return true;
+                }
+
+                if (current is Visual || current is System.Windows.Media.Media3D.Visual3D)
+                {
+                    current = VisualTreeHelper.GetParent(current);
+                }
+                else
+                {
+                    current = LogicalTreeHelper.GetParent(current);
+                }
+            }
+
+            return false;
         }
 
         private void StoryChoiceButton_Click(object sender, RoutedEventArgs e)
         {
+            if (FinishTypewriterEarly())
+            {
+                return;
+            }
+
             if (sender is Button button && button.Tag is string nextId)
             {
                 _storyService?.Choose(nextId);
@@ -407,15 +535,18 @@ namespace Birthday
         {
             Dispatcher.Invoke(() =>
             {
+                StopTypewriterEffect();
+                _currentFullDialogue = string.Empty;
+                _typewriterIndex = 0;
                 _isStoryRunning = false;
                 StoryChoicesPanel.Children.Clear();
                 StoryNextButton.Visibility = Visibility.Visible;
                 StoryNextButton.IsEnabled = false;
                 StoryNextButton.Content = "劇情完結";
-                StoryStatusText.Text = "序章告一段落，返回主選單以繼續冒險。";
+                StoryStatusText.Text = "Need to add fighting system.";
                 StoryStatusText.Visibility = Visibility.Visible;
                 StorySpeakerText.Text = "系統";
-                StoryDialogueText.Text = "感謝遊玩，敬請期待更多內容。";
+                StoryDialogueText.Text = "Need to add money system";
 
                 StoryCharacterImage.Source = null;
             });
@@ -425,7 +556,7 @@ namespace Birthday
         {
             StoryTitleText.Text = step.Title ?? string.Empty;
             StorySpeakerText.Text = string.IsNullOrWhiteSpace(step.CharacterName) ? "旁白" : step.CharacterName;
-            StoryDialogueText.Text = step.Dialogue ?? string.Empty;
+            StartTypewriter(step.Dialogue ?? string.Empty);
             StoryStatusText.Visibility = Visibility.Collapsed;
             StoryStatusText.Text = string.Empty;
 
@@ -442,20 +573,29 @@ namespace Birthday
             if (step.Choices.Count > 0)
             {
                 StoryNextButton.Visibility = Visibility.Collapsed;
-                StoryStatusText.Text = "請選擇下一步行動";
+                StoryStatusText.Text = "請選擇你的行動";
                 StoryStatusText.Visibility = Visibility.Visible;
 
-                foreach (var choice in step.Choices)
+                var choiceStyle = TryFindResource("StoryChoiceButtonStyle") as Style;
+
+                for (int i = 0; i < step.Choices.Count; i++)
                 {
+                    var choice = step.Choices[i];
                     var button = new Button
                     {
-                        Content = choice.Text,
-                        Padding = new Thickness(18, 10, 18, 10),
-                        Margin = new Thickness(0, 6, 0, 0),
-                        FontSize = 16,
-                        MinWidth = 240,
-                        Tag = choice.NextId
+                        Margin = new Thickness(0, i == 0 ? 0 : 12, 0, 0),
+                        MinWidth = 320,
+                        Tag = choice.NextId,
+                        Cursor = Cursors.Hand,
+                        HorizontalAlignment = HorizontalAlignment.Stretch
                     };
+
+                    if (choiceStyle != null)
+                    {
+                        button.Style = choiceStyle;
+                    }
+
+                    button.Content = CreateChoiceContent(i + 1, choice.Text ?? string.Empty);
                     button.Click += StoryChoiceButton_Click;
                     StoryChoicesPanel.Children.Add(button);
                 }
@@ -469,8 +609,62 @@ namespace Birthday
             }
         }
 
+        private FrameworkElement CreateChoiceContent(int displayIndex, string text)
+        {
+            var grid = new Grid
+            {
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var badge = new Border
+            {
+                Width = 36,
+                Height = 36,
+                CornerRadius = new CornerRadius(18),
+                Background = new SolidColorBrush(Color.FromArgb(0xEE, 0x2B, 0x35, 0x4A)),
+                BorderBrush = new SolidColorBrush(Color.FromArgb(0x88, 0xA9, 0xC4, 0xFF)),
+                BorderThickness = new Thickness(1.2),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            var badgeText = new TextBlock
+            {
+                Text = displayIndex.ToString("00", CultureInfo.InvariantCulture),
+                Foreground = Brushes.White,
+                FontSize = 16,
+                FontWeight = FontWeights.SemiBold,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            badge.Child = badgeText;
+
+            var textBlock = new TextBlock
+            {
+                Text = text,
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = new SolidColorBrush(Color.FromRgb(0xF0, 0xF4, 0xFF)),
+                FontSize = 18,
+                Margin = new Thickness(18, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            grid.Children.Add(badge);
+            Grid.SetColumn(textBlock, 1);
+            grid.Children.Add(textBlock);
+
+            return grid;
+        }
+
         private void ResetStoryUi()
         {
+            StopTypewriterEffect();
+            _currentFullDialogue = string.Empty;
+            _typewriterIndex = 0;
+            _isTypewriting = false;
             StoryTitleText.Text = string.Empty;
             StorySpeakerText.Text = string.Empty;
             StoryDialogueText.Text = string.Empty;
@@ -482,6 +676,75 @@ namespace Birthday
             StoryNextButton.Content = "下一句";
             StoryBackgroundImage.Source = null;
             StoryCharacterImage.Source = null;
+            CollapseStoryMenu();
+        }
+
+        private void StartTypewriter(string text)
+        {
+            _currentFullDialogue = text ?? string.Empty;
+            _typewriterIndex = 0;
+            StopTypewriterEffect();
+
+            if (string.IsNullOrEmpty(_currentFullDialogue))
+            {
+                StoryDialogueText.Text = string.Empty;
+                _isTypewriting = false;
+                return;
+            }
+
+            StoryDialogueText.Text = string.Empty;
+            _isTypewriting = true;
+
+            _typewriterTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(35)
+            };
+            _typewriterTimer.Tick += TypewriterTimer_Tick;
+            _typewriterTimer.Start();
+        }
+
+        private void TypewriterTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_typewriterIndex < _currentFullDialogue.Length)
+            {
+                _typewriterIndex++;
+                StoryDialogueText.Text = _currentFullDialogue.Substring(0, _typewriterIndex);
+            }
+
+            if (_typewriterIndex >= _currentFullDialogue.Length)
+            {
+                CompleteTypewriter();
+            }
+        }
+
+        private void CompleteTypewriter()
+        {
+            StopTypewriterEffect();
+            StoryDialogueText.Text = _currentFullDialogue;
+            _isTypewriting = false;
+        }
+
+        private bool FinishTypewriterEarly()
+        {
+            if (!_isTypewriting)
+            {
+                return false;
+            }
+
+            CompleteTypewriter();
+            return true;
+        }
+
+        private void StopTypewriterEffect()
+        {
+            if (_typewriterTimer != null)
+            {
+                _typewriterTimer.Tick -= TypewriterTimer_Tick;
+                _typewriterTimer.Stop();
+                _typewriterTimer = null;
+            }
+
+            _isTypewriting = false;
         }
 
         private void UpdateImageSource(Image target, string? relativePath)
@@ -523,6 +786,37 @@ namespace Birthday
                 Trace.WriteLine($"[Story] Failed to load image: {ex.Message}");
                 target.Source = null;
             }
+        }
+
+        private void Save1_BtnDelete_Click(object sender, RoutedEventArgs e)
+        {
+            IniFiles DeleteSave = new IniFiles(LoadSetini);
+            DeleteSave.IniWriteValue("Save1", "Level", "1");
+            DeleteSave.IniWriteValue("Save1", "Chapter", "0");
+            DeleteSave.IniWriteValue("Save1", "Money", "0");
+            DeleteSave.IniWriteValue("Save1", "LastSaveTime", "");
+            ShowSaveManager();
+        }
+
+        private void Save2_BtnDelete_Click(object sender, RoutedEventArgs e)
+        {
+            IniFiles DeleteSave = new IniFiles(LoadSetini);
+            DeleteSave.IniWriteValue("Save2", "Level", "1");
+            DeleteSave.IniWriteValue("Save2", "Chapter", "0");
+            DeleteSave.IniWriteValue("Save2", "Money", "0");
+            DeleteSave.IniWriteValue("Save2", "LastSaveTime", "");
+            ShowSaveManager();
+        }
+
+        private void Save3_BtnDelete_Click(object sender, RoutedEventArgs e)
+        {
+            IniFiles DeleteSave = new IniFiles(LoadSetini);
+            DeleteSave.IniWriteValue("Save", "Level", "1");
+            DeleteSave.IniWriteValue("Save3", "Chapter", "0");
+            DeleteSave.IniWriteValue("Save3", "Money", "0");
+            DeleteSave.IniWriteValue("Save3", "LastSaveTime", "");
+            ShowSaveManager();
+
         }
     }
 }

@@ -14,7 +14,72 @@
         <!-- ===== 劇情遊戲層 ===== -->
         <Grid x:Name="GameLayer"
               Visibility="Collapsed"
-              Panel.ZIndex="20">
+              Panel.ZIndex="20"
+              PreviewMouseDown="GameLayer_PreviewMouseDown">
+            <Grid.Resources>
+                <Style x:Key="StoryChoiceButtonStyle" TargetType="Button">
+                    <Setter Property="Background">
+                        <Setter.Value>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#55202A3E" Offset="0"/>
+                                <GradientStop Color="#77304058" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Setter.Value>
+                    </Setter>
+                    <Setter Property="BorderBrush" Value="#5586A6FF"/>
+                    <Setter Property="BorderThickness" Value="1.5"/>
+                    <Setter Property="Foreground" Value="#FFF4F7FF"/>
+                    <Setter Property="FontFamily" Value="Consolas"/>
+                    <Setter Property="FontSize" Value="18"/>
+                    <Setter Property="Padding" Value="20,18,24,18"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                    <Setter Property="SnapsToDevicePixels" Value="True"/>
+                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="ChoiceBorder"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="20">
+                                    <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                      Margin="0"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="ChoiceBorder" Property="Background">
+                                            <Setter.Value>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                    <GradientStop Color="#772C3C5C" Offset="0"/>
+                                                    <GradientStop Color="#AA3C5180" Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Setter TargetName="ChoiceBorder" Property="BorderBrush" Value="#FF9FC4FF"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="ChoiceBorder" Property="Background">
+                                            <Setter.Value>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                    <GradientStop Color="#99203045" Offset="0"/>
+                                                    <GradientStop Color="#CC324268" Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Setter TargetName="ChoiceBorder" Property="BorderBrush" Value="#FFC4DAFF"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Opacity" Value="0.6"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </Grid.Resources>
             <Grid>
                 <Image x:Name="StoryBackgroundImage"
                        Stretch="UniformToFill"
@@ -30,6 +95,43 @@
                        Margin="0,0,80,200"
                        Width="420"
                        Stretch="Uniform"/>
+
+                <Border x:Name="StoryMenuContainer"
+                        Panel.ZIndex="4"
+                        Background="#55101520"
+                        BorderBrush="#44FFFFFF"
+                        BorderThickness="1"
+                        CornerRadius="18"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        Margin="36"
+                        Padding="12,16">
+                    <StackPanel>
+                        <Button x:Name="StoryMenuToggleButton"
+                                Content="☰ 劇情選單"
+                                Padding="14,8"
+                                FontSize="16"
+                                MinWidth="140"
+                                Click="StoryMenuToggleButton_Click"/>
+                        <StackPanel x:Name="StoryMenuButtonsPanel"
+                                    Visibility="Collapsed"
+                                    Margin="0,12,0,0">
+                            <Button x:Name="StorySaveButton"
+                                    Content="存檔"
+                                    Padding="14,8"
+                                    FontSize="16"
+                                    MinWidth="140"
+                                    Margin="0,0,0,10"
+                                    Click="StorySaveButton_Click"/>
+                            <Button x:Name="StoryBackButton"
+                                    Content="返回主選單"
+                                    Padding="14,8"
+                                    FontSize="16"
+                                    MinWidth="140"
+                                    Click="StoryBackButton_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
 
                 <Border Panel.ZIndex="3"
                         Background="#CC101520"
@@ -52,6 +154,7 @@
                                    Margin="0,0,0,8"/>
                         <TextBlock x:Name="StoryDialogueText"
                                    FontSize="20"
+                                   FontFamily="Consolas"
                                    Foreground="#FFF2F6FF"
                                    Opacity="0.92"
                                    TextWrapping="Wrap"
@@ -70,15 +173,8 @@
                                     Content="下一句"
                                     Padding="20,10"
                                     FontSize="18"
-                                    Margin="0,0,16,0"
                                     MinWidth="140"
                                     Click="StoryNextButton_Click"/>
-                            <Button x:Name="StoryBackButton"
-                                    Content="返回主選單"
-                                    Padding="20,10"
-                                    FontSize="18"
-                                    MinWidth="160"
-                                    Click="StoryBackButton_Click"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -187,7 +283,7 @@
 
                     <!-- 標題列 -->
                     <DockPanel>
-                        <TextBlock Text="載入遊戲"
+                        <TextBlock Text="存檔管理"
                    Foreground="White"
                    FontSize="40"
                    FontWeight="Bold"
@@ -293,7 +389,7 @@
                                 <!-- 操作 -->
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                                     <Button x:Name="Save1_BtnLoad" Content="載入" Style="{StaticResource PrimaryButton}" IsEnabled="False" Background="#FFDDDDDD" Foreground="#FF3A3A3A"/>
-                                    <Button x:Name="Save1_BtnDelete" Content="刪除" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
+                                    <Button x:Name="Save1_BtnDelete" Content="刪除" Style="{StaticResource SecondaryButton}" IsEnabled="False" Click="Save1_BtnDelete_Click"/>
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -319,7 +415,7 @@
 
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                                     <Button x:Name="Save2_BtnLoad" Content="載入" Style="{StaticResource PrimaryButton}" IsEnabled="False" Background="#FFDDDDDD" Foreground="#FF3A3A3A"/>
-                                    <Button x:Name="Save2_BtnDelete" Content="刪除" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
+                                    <Button x:Name="Save2_BtnDelete" Content="刪除" Style="{StaticResource SecondaryButton}" IsEnabled="False" Click="Save2_BtnDelete_Click"/>
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -348,7 +444,7 @@
                                 <!-- 操作 -->
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                                     <Button x:Name="Save3_BtnLoad" Content="載入" Style="{StaticResource PrimaryButton}" IsEnabled="False" Background="#FFDDDDDD" Foreground="#FF3A3A3A"/>
-                                    <Button x:Name="Save3_BtnDelete" Content="刪除" Style="{StaticResource SecondaryButton}" IsEnabled="False"/>
+                                    <Button x:Name="Save3_BtnDelete" Content="刪除" Style="{StaticResource SecondaryButton}" IsEnabled="False" Click="Save3_BtnDelete_Click"/>
                                 </StackPanel>
                             </Grid>
                         </Border>

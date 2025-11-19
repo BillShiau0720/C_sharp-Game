@@ -15,6 +15,8 @@ namespace Birthday
         public static int Now_Money { get; set; }   //目前金額
         public static int Last_SaveTime { get; set; }   //最後存檔時間
         public static bool Status_IsSaving { get; set; }       //是否正在儲存
+        public static bool IsSaved { get; set; }    //是否已儲存
+        public static bool Status_IsGaming { get; set; }       //是否正在遊戲與IsSaved組成連鎖邏輯
 
     }
 }
