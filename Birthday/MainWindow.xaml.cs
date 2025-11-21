@@ -662,57 +662,55 @@ namespace Birthday
         }
 
 
+        // 劇情模式的指令清單（仙劍風）
         private void RenderStoryChoices(StoryStep step)
         {
+            // 先清空舊按鈕
             StoryChoicesPanel.Children.Clear();
 
-            if (step.Choices.Count > 0)
+            // 有選項 → 顯示一整排仙劍風按鈕
+            if (step?.Choices != null && step.Choices.Count > 0)
             {
-                BattleNextButton.Visibility = Visibility.Collapsed;
+                // 劇情有選項時，「下一句」按鈕先藏起來
+                StoryNextButton.Visibility = Visibility.Collapsed;
 
-                var battleActionStyle = TryFindResource("BattleActionButtonStyle") as Style;
+                // 拿仙劍風 Style
+                var storyButtonStyle =
+                    TryFindResource("StoryChoiceButtonStyle") as Style;
 
-                for (int i = 0; i < step.Choices.Count; i++)
+                foreach (var choice in step.Choices)
                 {
-                    var choice = step.Choices[i];
-                    var button = new Button
+                    var btn = new Button
                     {
-                        Margin = new Thickness(12),
-                        MinHeight = 92,
-                        MinWidth = 180,
                         Tag = choice.NextId,
-                        HorizontalAlignment = HorizontalAlignment.Stretch,
-                        VerticalAlignment = VerticalAlignment.Stretch
+                        // 內容就用文字，外觀全部交給 Style
+                        Content = choice.Text ?? string.Empty,
+                        Margin = new Thickness(0, 6, 0, 6),
+                        HorizontalAlignment = HorizontalAlignment.Stretch
                     };
 
-                    if (battleActionStyle != null)
+                    if (storyButtonStyle != null)
                     {
-                        button.Style = battleActionStyle;
+                        btn.Style = storyButtonStyle;
                     }
 
-                    button.Content = new TextBlock
-                    {
-                        Text = choice.Text ?? string.Empty,
-                        TextWrapping = TextWrapping.Wrap,
-                        TextAlignment = TextAlignment.Center,
-                        FontSize = 20,
-                        Foreground = new SolidColorBrush(Color.FromRgb(0x05, 0x07, 0x0F)),
-                        FontWeight = FontWeights.Bold,
-                        HorizontalAlignment = HorizontalAlignment.Center,
-                        VerticalAlignment = VerticalAlignment.Center
-                    };
+                    btn.Click += StoryChoiceButton_Click;
 
-                    button.Click += StoryChoiceButton_Click;
-                    BattleChoicesPanel.Children.Add(button);
+                    // ✅ 關鍵：加到 StoryChoicesPanel，不再碰 BattleChoicesPanel
+                    StoryChoicesPanel.Children.Add(btn);
                 }
             }
             else
             {
-                BattleNextButton.Visibility = Visibility.Visible;
-                BattleNextButton.IsEnabled = true;
-                BattleNextButton.Content = step.IsFinal ? "劇情完結" : "下一句";
+                // 沒選項 → 顯示「下一句」或「劇情完結」
+                StoryNextButton.Visibility = Visibility.Visible;
+                StoryNextButton.IsEnabled = true;
+                StoryNextButton.Content = step != null && step.IsFinal
+                    ? "劇情完結"
+                    : "下一句";
             }
         }
+
         private enum BattleActionKind
         {
             Attack,
@@ -844,15 +842,16 @@ namespace Birthday
         {
             var button = new Button
             {
-                Margin = new Thickness(14, 12, 14, 12),
-                MinHeight = 96,
-                MinWidth = 196,
+                Margin = new Thickness(8, 6, 8, 6),
+                MinHeight = 80,
+                MinWidth = 180,
                 Tag = choice.NextId,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 VerticalAlignment = VerticalAlignment.Stretch
             };
 
-            button.Style = ResolveBattleActionStyle(choice.Text, index) ?? TryFindResource("BattleActionButtonBaseStyle") as Style;
+            button.Style = ResolveBattleActionStyle(choice.Text, index)
+                           ?? TryFindResource("BattleActionButtonBaseStyle") as Style;
             button.Content = CreateBattleChoiceContent(choice.Text ?? string.Empty);
             button.Click += StoryChoiceButton_Click;
 
@@ -863,24 +862,23 @@ namespace Birthday
         {
             var skillButton = new Button
             {
-                Margin = new Thickness(14, 12, 14, 12),
-                MinHeight = 96,
-                MinWidth = 196,
+                Margin = new Thickness(8, 6, 8, 6),
+                MinHeight = 80,
+                MinWidth = 180,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 VerticalAlignment = VerticalAlignment.Stretch,
                 Content = CreateBattleChoiceContent("技能: 展開招式")
             };
 
-            skillButton.Style = TryFindResource("BattleSkill1ButtonStyle") as Style ?? TryFindResource("BattleActionButtonBaseStyle") as Style;
+            skillButton.Style = TryFindResource("BattleSkill1ButtonStyle") as Style
+                                ?? TryFindResource("BattleActionButtonBaseStyle") as Style;
 
             var menu = BuildSkillMenu(skillChoices);
 
             skillButton.Click += (s, e) =>
             {
                 if (FinishTypewriterEarly())
-                {
                     return;
-                }
 
                 OpenSkillMenu(skillButton, menu);
             };
