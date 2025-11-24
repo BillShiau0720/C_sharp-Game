@@ -19,7 +19,9 @@
   <ItemGroup>
     <None Remove="Assets\Audio\BGM\MainMenu.mp3" />
     <None Remove="Assets\Image\Figure\Boss.jpg" />
+    <None Remove="Assets\Image\Figure\Train.png" />
     <None Remove="Assets\Image\Figure\女將軍_全身.jpg" />
+    <None Remove="Assets\Image\Figure\女將軍_全身.png" />
     <None Remove="Assets\Image\Figure\女將軍_大頭照.jpg" />
     <None Remove="Assets\Image\Figure\豹豹_全身.jpg" />
     <None Remove="Assets\Image\Figure\豹豹_大頭照.jpg" />
@@ -49,10 +51,10 @@
     <Content Include="Assets\Audio\BGM\MainMenu.mp3">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Assets\Image\Figure\女將軍_全身.jpg">
+    <Content Include="Assets\Image\Figure\Train.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Assets\Image\Figure\女將軍_大頭照.jpg">
+    <Content Include="Assets\Image\Figure\女將軍_全身.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Assets\Image\Figure\豹豹_全身.jpg">

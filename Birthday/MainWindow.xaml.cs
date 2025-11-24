@@ -51,6 +51,9 @@ namespace Birthday
         private int _lastPlayerHpMax = -1;
         private int _lastEnemyHp = -1;
         private int _lastEnemyHpMax = -1;
+        private BattleSession? _activeBattle;
+        private string? _pendingBattleResolutionNextId;
+        private readonly Dictionary<string, BattleDefinition> _battleDefinitions = new();
         private StoryStep? _currentStep;
 
         public MainWindow()
@@ -60,6 +63,7 @@ namespace Birthday
             this.KeyDown += MainWindow_KeyDown;
 
             InitializeStorySystem();
+            InitializeBattleDefinitions();
 
             //訂閱開啟事件
             Loaded += (_, __) =>
@@ -384,6 +388,44 @@ namespace Birthday
             ResetStoryUi();
         }
 
+        private void InitializeBattleDefinitions()
+        {
+            _battleDefinitions.Clear();
+
+            _battleDefinitions["tutorial_choice"] = new BattleDefinition(
+                "tutorial_choice",
+                "bandit_report",
+                PlayerDefeatStepId,
+                new BattleFighter { Name = "貓貓", MaxHp = 120, Attack = 26, Defense = 8 },
+                new BattleFighter { Name = "豹豹", MaxHp = 110, Attack = 22, Defense = 10, SupportRatio = 0.7 },
+                new BattleFighter { Name = "訓練傀儡", MaxHp = 90, Attack = 18, Defense = 6 },
+                System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "Audio", "BGM", "Battle.mp3"),
+                "訓練模式：依序輪流出手，擊倒傀儡即可結束。"
+            );
+
+            _battleDefinitions["bandit_battle_choice"] = new BattleDefinition(
+                "bandit_battle_choice",
+                "bandit_battle_result",
+                PlayerDefeatStepId,
+                new BattleFighter { Name = "貓貓", MaxHp = 120, Attack = 28, Defense = 10 },
+                new BattleFighter { Name = "豹豹", MaxHp = 110, Attack = 24, Defense = 12, SupportRatio = 0.8 },
+                new BattleFighter { Name = "山匪頭目", MaxHp = 140, Attack = 22, Defense = 10 },
+                System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "Audio", "BGM", "Battle.mp3"),
+                "山道伏戰：像寶可夢般下達指令，擊潰頭目。"
+            );
+
+            _battleDefinitions["final_battle_choice"] = new BattleDefinition(
+                "final_battle_choice",
+                "epilogue",
+                PlayerDefeatStepId,
+                new BattleFighter { Name = "貓貓", MaxHp = 120, Attack = 30, Defense = 12 },
+                new BattleFighter { Name = "豹豹", MaxHp = 95, Attack = 26, Defense = 12, SupportRatio = 0.9 },
+                new BattleFighter { Name = "黑袍首領", MaxHp = 180, Attack = 26, Defense = 12 },
+                System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "Audio", "BGM", "Final Boss Battle.mp3"),
+                "決戰天璇峰：連攜武功削弱魔焰，輪流出手直至勝負。"
+            );
+        }
+
         private void StartStory()
         {
             if (_storyService == null)
@@ -434,13 +476,38 @@ namespace Birthday
                 return;
             }
 
+            if (ShouldBlockBattleAdvance())
+            {
+                if (BattlePromptText != null)
+                {
+                    BattlePromptText.Text = "戰鬥尚未結束，請繼續戰鬥直到一方 HP 歸零。";
+                }
+
+                return;
+            }
+
             _storyService?.Continue();
         }
 
         private void BattleNextButton_Click(object sender, RoutedEventArgs e)
         {
+            if (_currentStep?.UseBattleLayout == true && _isTypewriting)
+            {
+                return;
+            }
+
             if (FinishTypewriterEarly())
             {
+                return;
+            }
+
+            if (_pendingBattleResolutionNextId != null)
+            {
+                var target = _pendingBattleResolutionNextId;
+                _pendingBattleResolutionNextId = null;
+                _activeBattle = null;
+                CloseSkillMenu();
+                _storyService?.Choose(target);
                 return;
             }
 
@@ -456,7 +523,6 @@ namespace Birthday
 
             _storyService?.Continue();
         }
-
 
         private void StorySaveButton_Click(object sender, RoutedEventArgs e)
         {
@@ -552,10 +618,39 @@ namespace Birthday
             }
         }
 
+        private void BattleChoiceButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag is StoryChoice choice)
+            {
+                if (_currentStep?.UseBattleLayout == true && _isTypewriting)
+                {
+                    return;
+                }
+
+                if (_activeBattle != null && _currentStep?.UseBattleLayout == true)
+                {
+                    ExecuteBattleAction(choice);
+                    return;
+                }
+
+                HandleChoiceSelection(choice.NextId);
+            }
+        }
+
         private void HandleChoiceSelection(string? nextId)
         {
             if (FinishTypewriterEarly())
             {
+                return;
+            }
+
+            if (ShouldBlockBattleAdvance())
+            {
+                if (BattlePromptText != null)
+                {
+                    BattlePromptText.Text = "敵方仍在場上，無法跳過戰鬥劇情。";
+                }
+
                 return;
             }
 
@@ -565,16 +660,34 @@ namespace Birthday
             }
         }
 
-
         private void StoryService_StepChanged(StoryStep step)
         {
             Dispatcher.Invoke(() =>
             {
                 _currentStep = step;
-                ApplyStoryStep(step);
+
+                StoryLayout.Visibility = step.UseBattleLayout ? Visibility.Collapsed : Visibility.Visible;
+                BattleLayout.Visibility = step.UseBattleLayout ? Visibility.Visible : Visibility.Collapsed;
+
+                if (!step.UseBattleLayout)
+                {
+                    ResetBattleTracking();
+                }
+
+                StopTypewriterEffect();
+                _currentFullDialogue = string.Empty;
+                _typewriterIndex = 0;
+
+                if (step.UseBattleLayout)
+                {
+                    ApplyBattleStep(step);
+                }
+                else
+                {
+                    ApplyNarrativeStep(step);
+                }
             });
         }
-
         private void StoryService_StoryCompleted()
         {
             Dispatcher.Invoke(() =>
@@ -603,29 +716,6 @@ namespace Birthday
                 ResetBattleTracking();
             });
         }
-        private void ApplyStoryStep(StoryStep step)
-        {
-            StoryLayout.Visibility = step.UseBattleLayout ? Visibility.Collapsed : Visibility.Visible;
-            BattleLayout.Visibility = step.UseBattleLayout ? Visibility.Visible : Visibility.Collapsed;
-
-            if (!step.UseBattleLayout)
-            {
-                ResetBattleTracking();
-            }
-
-            StopTypewriterEffect();
-            _currentFullDialogue = string.Empty;
-            _typewriterIndex = 0;
-
-            if (step.UseBattleLayout)
-            {
-                ApplyBattleStep(step);
-            }
-            else
-            {
-                ApplyNarrativeStep(step);
-            }
-        }
 
         private void ApplyNarrativeStep(StoryStep step)
         {
@@ -647,9 +737,14 @@ namespace Birthday
             BattleSpeakerText.Text = string.IsNullOrWhiteSpace(step.CharacterName) ? "旁白" : step.CharacterName;
             BattlePromptText.Text = step.BattlePrompt ?? string.Empty;
 
-            UpdateBattleHealth(step);
-
-            StartTypewriter(step.Dialogue ?? string.Empty, BattleDialogueText);
+            if (_activeBattle != null)
+            {
+                RefreshBattleHealthFromState();
+            }
+            else
+            {
+                UpdateBattleHealth(step);
+            }
 
             StartTypewriter(step.Dialogue ?? string.Empty, BattleDialogueText);
 
@@ -658,6 +753,7 @@ namespace Birthday
             UpdateImageSource(BattleAllyAvatar, step.AllyAvatar);
             UpdateImageSource(BattleEnemyAvatar, step.EnemyAvatar ?? step.CharacterImage);
 
+            TryStartBattle(step);
             RenderBattleChoices(step);
         }
 
@@ -719,11 +815,215 @@ namespace Birthday
             Other
         }
 
+        private enum BattleAction
+        {
+            Attack,
+            Defend,
+            SkillWind,
+            SkillFrost,
+            SkillBind,
+            SkillThunder,
+            Item
+        }
+
+        private record BattleDefinition(
+            string StepId,
+            string VictoryNextId,
+            string DefeatNextId,
+            BattleFighter Player,
+            BattleFighter Ally,
+            BattleFighter Enemy,
+            string? BattleBgm,
+            string IntroPrompt);
+
+        private sealed class BattleSession
+        {
+            public BattleDefinition Definition { get; }
+            public BattleFighter Player { get; }
+            public BattleFighter Ally { get; }
+            public BattleFighter Enemy { get; }
+            public bool IsResolved => Player.CurrentHp <= 0 || Enemy.CurrentHp <= 0;
+            public bool EnemyStunned { get; set; }
+            public bool PlayerGuarding { get; set; }
+            public int Turn { get; private set; } = 1;
+
+            public BattleSession(BattleDefinition definition)
+            {
+                Definition = definition;
+                Player = definition.Player.Clone();
+                Ally = definition.Ally.Clone();
+                Enemy = definition.Enemy.Clone();
+            }
+
+            public BattleTurnResult ExecutePlayerAction(BattleAction action)
+            {
+                var log = new StringBuilder();
+
+                if (IsResolved)
+                {
+                    log.AppendLine("戰鬥已結束，等待下一步劇情。");
+                    return new BattleTurnResult(log.ToString(), ResolveOutcome());
+                }
+
+                switch (action)
+                {
+                    case BattleAction.Attack:
+                        ApplyAttack(Player, Enemy, 1.0, log, "貓貓使用普通攻擊");
+                        break;
+                    case BattleAction.Defend:
+                        PlayerGuarding = true;
+                        log.AppendLine("貓貓收刀防守，下一次受到的傷害降低。");
+                        break;
+                    case BattleAction.SkillWind:
+                        ApplyAttack(Player, Enemy, 0.85, log, "風剪四式削弱防禦");
+                        Enemy.DefenseModifier = Math.Max(0, Enemy.DefenseModifier - 2);
+                        log.AppendLine("敵方防禦下降，後續攻擊將更痛。");
+                        break;
+                    case BattleAction.SkillFrost:
+                        ApplyAttack(Player, Enemy, 0.75, log, "霜鎖月輪斬");
+                        Enemy.AttackModifier = Math.Max(0, Enemy.AttackModifier - 2);
+                        log.AppendLine("敵方攻擊被寒氣壓制。");
+                        break;
+                    case BattleAction.SkillBind:
+                        ApplyAttack(Player, Enemy, 0.5, log, "影縛勾鎖束縛敵人");
+                        EnemyStunned = true;
+                        log.AppendLine("敵人被定身，下個回合跳過。");
+                        break;
+                    case BattleAction.SkillThunder:
+                        ApplyAttack(Player, Enemy, 1.35, log, "雷踏裂地爆發");
+                        var recoil = Math.Max(4, (int)Math.Round(Player.Attack * 0.1));
+                        Player.CurrentHp = Math.Max(0, Player.CurrentHp - recoil);
+                        log.AppendLine($"真氣反震讓貓貓自損 {recoil} 點。");
+                        break;
+                    case BattleAction.Item:
+                        var heal = Math.Min(Player.MaxHp - Player.CurrentHp, 30);
+                        Player.CurrentHp += heal;
+                        log.AppendLine($"貓貓使用金創藥，回復 {heal} HP。");
+                        break;
+                }
+
+                if (Enemy.CurrentHp <= 0)
+                {
+                    log.AppendLine("敵人倒下，戰局逆轉！");
+                    return new BattleTurnResult(log.ToString(), BattleOutcome.Victory);
+                }
+
+                if (Ally.CurrentHp > 0 && Enemy.CurrentHp > 0)
+                {
+                    ApplyAttack(Ally, Enemy, Ally.SupportRatio, log, "豹豹按腳本出手");
+                    if (Enemy.CurrentHp <= 0)
+                    {
+                        log.AppendLine("豹豹的追擊終結了戰鬥！");
+                        return new BattleTurnResult(log.ToString(), BattleOutcome.Victory);
+                    }
+                }
+
+                if (Enemy.CurrentHp > 0)
+                {
+                    if (EnemyStunned)
+                    {
+                        log.AppendLine("敵人被束縛，錯過了行動。");
+                        EnemyStunned = false;
+                    }
+                    else
+                    {
+                        ApplyEnemyTurn(log);
+                    }
+                }
+
+                Turn++;
+                return new BattleTurnResult(log.ToString(), ResolveOutcome());
+            }
+
+            private BattleOutcome ResolveOutcome()
+            {
+                if (Player.CurrentHp <= 0)
+                {
+                    return BattleOutcome.Defeat;
+                }
+
+                if (Enemy.CurrentHp <= 0)
+                {
+                    return BattleOutcome.Victory;
+                }
+
+                return BattleOutcome.Ongoing;
+            }
+
+            private void ApplyEnemyTurn(StringBuilder log)
+            {
+                var target = Player;
+                var damage = CalculateDamage(Enemy, target, 1.0);
+
+                if (PlayerGuarding)
+                {
+                    damage = (int)Math.Round(damage * 0.55);
+                    PlayerGuarding = false;
+                    log.AppendLine("防禦姿態減輕了傷害。");
+                }
+
+                target.CurrentHp = Math.Max(0, target.CurrentHp - damage);
+                log.AppendLine($"敵方猛攻，{target.Name} 受到 {damage} 點傷害。");
+            }
+
+            private void ApplyAttack(BattleFighter attacker, BattleFighter target, double multiplier, StringBuilder log, string title)
+            {
+                var damage = CalculateDamage(attacker, target, multiplier);
+                target.CurrentHp = Math.Max(0, target.CurrentHp - damage);
+                log.AppendLine($"{title}，造成 {damage} 傷害。");
+            }
+
+            private static int CalculateDamage(BattleFighter attacker, BattleFighter target, double multiplier)
+            {
+                var attackStat = attacker.Attack + attacker.AttackModifier;
+                var defenseStat = target.Defense + target.DefenseModifier;
+                var raw = Math.Max(1, attackStat - (int)Math.Round(defenseStat * 0.35));
+                var damage = (int)Math.Round(raw * multiplier);
+                return Math.Max(1, damage);
+            }
+        }
+
+        private sealed class BattleFighter
+        {
+            public string Name { get; init; } = string.Empty;
+            public int MaxHp { get; init; }
+            public int CurrentHp { get; set; }
+            public int Attack { get; init; }
+            public int Defense { get; init; }
+            public int AttackModifier { get; set; }
+            public int DefenseModifier { get; set; }
+            public double SupportRatio { get; init; } = 0.8;
+
+            public BattleFighter Clone()
+            {
+                return new BattleFighter
+                {
+                    Name = Name,
+                    MaxHp = MaxHp,
+                    CurrentHp = MaxHp,
+                    Attack = Attack,
+                    Defense = Defense,
+                    AttackModifier = AttackModifier,
+                    DefenseModifier = DefenseModifier,
+                    SupportRatio = SupportRatio,
+                };
+            }
+        }
+
+        private enum BattleOutcome
+        {
+            Ongoing,
+            Victory,
+            Defeat
+        }
+
+        private sealed record BattleTurnResult(string Narration, BattleOutcome Outcome);
 
         private void RenderBattleChoices(StoryStep step)
         {
             CloseSkillMenu();
             BattleChoicesPanel.Children.Clear();
+            BattleChoicesPanel.IsEnabled = true;
 
             if (step.Choices.Count > 0)
             {
@@ -756,6 +1056,55 @@ namespace Birthday
                 BattleNextButton.IsEnabled = true;
                 BattleNextButton.Content = step.IsFinal ? "劇情完結" : "下一句";
             }
+        }
+
+        private void TryStartBattle(StoryStep step)
+        {
+            if (_activeBattle != null)
+            {
+                RefreshBattleHealthFromState();
+                return;
+            }
+
+            if (_battleDefinitions.TryGetValue(step.Id, out var definition))
+            {
+                _activeBattle = new BattleSession(definition);
+                _pendingBattleResolutionNextId = null;
+                RefreshBattleHealthFromState();
+
+                if (!string.IsNullOrEmpty(definition.BattleBgm))
+                {
+                    BgmService.Instance.Play(definition.BattleBgm, loop: true, targetVolume: 1f, fadeSeconds: 0.6);
+                }
+
+                if (!string.IsNullOrWhiteSpace(definition.IntroPrompt))
+                {
+                    BattlePromptText.Text = definition.IntroPrompt;
+                }
+            }
+        }
+
+        private void RefreshBattleHealthFromState()
+        {
+            if (_activeBattle == null)
+            {
+                return;
+            }
+
+            _lastPlayerHp = _activeBattle.Player.CurrentHp;
+            _lastPlayerHpMax = _activeBattle.Player.MaxHp;
+            _lastEnemyHp = _activeBattle.Enemy.CurrentHp;
+            _lastEnemyHpMax = _activeBattle.Enemy.MaxHp;
+
+            UpdateHealthRow(BattlePlayerHealthRow, BattlePlayerHpLabel, BattlePlayerHpValueText, BattlePlayerHpFillScale,
+                _activeBattle.Player.Name, true, _activeBattle.Player.CurrentHp, _activeBattle.Player.MaxHp);
+            UpdateHealthRow(BattleAllyHealthRow, BattleAllyHpLabel, BattleAllyHpValueText, BattleAllyHpFillScale,
+                _activeBattle.Ally.Name, _activeBattle.Ally.MaxHp > 0, _activeBattle.Ally.CurrentHp, _activeBattle.Ally.MaxHp);
+            UpdateHealthRow(BattleEnemyHealthRow, BattleEnemyHpLabel, BattleEnemyHpValueText, BattleEnemyHpFillScale,
+                _activeBattle.Enemy.Name, true, _activeBattle.Enemy.CurrentHp, _activeBattle.Enemy.MaxHp);
+
+            var hasAny = _activeBattle.Player.MaxHp > 0 || _activeBattle.Ally.MaxHp > 0 || _activeBattle.Enemy.MaxHp > 0;
+            BattleHealthPanel.Visibility = hasAny ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private Style? FindBattleResourceStyle(string key)
@@ -848,7 +1197,7 @@ namespace Birthday
         {
             var button = new Button
             {
-                Tag = choice.NextId,
+                Tag = choice,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 VerticalAlignment = VerticalAlignment.Stretch
             };
@@ -856,7 +1205,7 @@ namespace Birthday
             button.Style = ResolveBattleActionStyle(choice.Text, index)
                            ?? FindBattleResourceStyle("BattleActionButtonBaseStyle");
             button.Content = CreateBattleChoiceContent(choice.Text ?? string.Empty);
-            button.Click += StoryChoiceButton_Click;
+            button.Click += BattleChoiceButton_Click;
 
             return button;
         }
@@ -877,6 +1226,11 @@ namespace Birthday
 
             skillButton.Click += (s, e) =>
             {
+                if (_currentStep?.UseBattleLayout == true && _isTypewriting)
+                {
+                    return;
+                }
+
                 if (FinishTypewriterEarly())
                     return;
 
@@ -945,8 +1299,89 @@ namespace Birthday
         {
             if (sender is MenuItem menuItem)
             {
+                if (menuItem.Tag is StoryChoice choice)
+                {
+                    if (_currentStep?.UseBattleLayout == true && _isTypewriting)
+                    {
+                        return;
+                    }
+                    if (_activeBattle != null)
+                    {
+                        ExecuteBattleAction(choice);
+                        return;
+                    }
+
+                    HandleChoiceSelection(choice.NextId);
+                    return;
+                }
+
                 HandleChoiceSelection(menuItem.Tag as string);
             }
+        }
+
+        private void ExecuteBattleAction(StoryChoice choice)
+        {
+            if (_activeBattle == null)
+            {
+                HandleChoiceSelection(choice.NextId);
+                return;
+            }
+
+            var action = ResolveBattleActionFromChoice(choice);
+            var result = _activeBattle.ExecutePlayerAction(action);
+
+            RefreshBattleHealthFromState();
+
+            BattlePromptText.Text = $"第 {_activeBattle.Turn} 回合：等待下一步指令";
+            StartTypewriter(result.Narration.Trim(), BattleDialogueText);
+
+            if (result.Outcome != BattleOutcome.Ongoing)
+            {
+                PrepareBattleResolution(result.Outcome);
+            }
+        }
+
+        private void PrepareBattleResolution(BattleOutcome outcome)
+        {
+            if (_activeBattle == null)
+            {
+                return;
+            }
+
+            _pendingBattleResolutionNextId = outcome == BattleOutcome.Victory
+                ? _activeBattle.Definition.VictoryNextId
+                : _activeBattle.Definition.DefeatNextId;
+
+            BattleChoicesPanel.IsEnabled = false;
+            BattleNextButton.Visibility = Visibility.Visible;
+            BattleNextButton.IsEnabled = true;
+            BattleNextButton.Content = outcome == BattleOutcome.Victory ? "戰鬥勝利" : "戰鬥失敗";
+
+            BattlePromptText.Text = outcome == BattleOutcome.Victory
+                ? "勝利！點擊戰鬥勝利進入劇情結算。"
+                : "敗北，點擊戰鬥失敗回到讀檔或重來。";
+        }
+
+        private BattleAction ResolveBattleActionFromChoice(StoryChoice choice)
+        {
+            var normalized = (choice.Text ?? string.Empty).Replace('：', ':').ToLowerInvariant();
+
+            if (normalized.Contains("防禦"))
+                return BattleAction.Defend;
+            if (normalized.Contains("道具") || normalized.Contains("藥"))
+                return BattleAction.Item;
+            if (normalized.Contains("影縛") || normalized.Contains("影缚"))
+                return BattleAction.SkillBind;
+            if (normalized.Contains("雷踏") || normalized.Contains("雷"))
+                return BattleAction.SkillThunder;
+            if (normalized.Contains("霜") || normalized.Contains("月"))
+                return BattleAction.SkillFrost;
+            if (normalized.Contains("風") || normalized.Contains("飛燕"))
+                return BattleAction.SkillWind;
+            if (normalized.Contains("攻擊") || normalized.Contains("普攻"))
+                return BattleAction.Attack;
+
+            return BattleAction.Attack;
         }
 
         private void CloseSkillMenu()
@@ -1036,6 +1471,11 @@ namespace Birthday
         }
         private bool ShouldBlockBattleAdvance()
         {
+            if (_activeBattle != null)
+            {
+                return !_activeBattle.IsResolved || _pendingBattleResolutionNextId == null;
+            }
+
             if (_currentStep?.UseBattleLayout != true || _storyService == null)
             {
                 return false;
@@ -1152,15 +1592,17 @@ namespace Birthday
                 fillTransform.ScaleX = 0;
             }
         }
-        private void ResetBattleTracking()
+private void ResetBattleTracking()
         {
             CloseSkillMenu();
             _lastPlayerHp = -1;
             _lastPlayerHpMax = -1;
             _lastEnemyHp = -1;
             _lastEnemyHpMax = -1;
+            _activeBattle = null;
+            _pendingBattleResolutionNextId = null;
+            BattleChoicesPanel.IsEnabled = true;
         }
-
 
         private void ResetStoryUi()
         {
