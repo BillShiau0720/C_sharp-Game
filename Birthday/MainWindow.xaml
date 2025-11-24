@@ -17,73 +17,8 @@
                   Panel.ZIndex="20"
                   PreviewMouseDown="GameLayer_PreviewMouseDown">
             <Grid.Resources>
-                
-                
-                <LinearGradientBrush x:Key="BattleCommandPanelBackground" StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#FFF6F8FF" Offset="0"/>
-                    <GradientStop Color="#FFEBF0FF" Offset="1"/>
-                </LinearGradientBrush>
-                <!-- ===== 戰鬥指令按鈕：仙劍風底板 ===== -->
-                <Style x:Key="BattleActionButtonBaseStyle"
-       TargetType="Button">
-                    <Setter Property="Foreground" Value="#FF20110A"/>
-                    <Setter Property="FontFamily" Value="Microsoft JhengHei UI"/>
-                    <Setter Property="FontSize" Value="18"/>
-                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                    <Setter Property="VerticalContentAlignment" Value="Center"/>
-                    <Setter Property="Padding" Value="8,4"/>
-                    <Setter Property="SnapsToDevicePixels" Value="True"/>
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="Root"
-                                    CornerRadius="10"
-                                    Background="#FFF5F0E3"           
-                                    BorderBrush="#FFC9A87A"
-                                    BorderThickness="1.4"
-                                    SnapsToDevicePixels="True">
-                                    <ContentPresenter HorizontalAlignment="Center"
-                                      VerticalAlignment="Center"
-                                      Margin="6,4"/>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <!-- Hover -->
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Root"
-                                            Property="Background"
-                                            Value="#FFFFF7EB"/>
-                                        <Setter TargetName="Root"
-                                            Property="BorderBrush"
-                                            Value="#FFE8BF7E"/>
-                                    </Trigger>
 
-                                    <!-- 按下去 -->
-                                    <Trigger Property="IsPressed" Value="True">
-                                        <Setter TargetName="Root"
-                                            Property="Background"
-                                            Value="#FFE6D2B4"/>
-                                        <Setter TargetName="Root"
-                                            Property="BorderBrush"
-                                            Value="#FFB07D43"/>
-                                        <Setter TargetName="Root"
-                                                Property="RenderTransform">
-                                            <Setter.Value>
-                                                <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
-                                            </Setter.Value>
-                                        </Setter>
-                                    </Trigger>
 
-                                    <!-- Disabled -->
-                                    <Trigger Property="IsEnabled" Value="False">
-                                        <Setter TargetName="Root"
-                                            Property="Opacity"
-                                            Value="0.55"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                </Style>
                 <!-- 劇情指令清單：仙劍風按鈕 -->
                 <Style x:Key="StoryChoiceButtonStyle" TargetType="Button">
                     <!-- 基本字體與對齊 -->
@@ -164,6 +99,15 @@
                         </Setter.Value>
                     </Setter>
                 </Style>
+
+                <LinearGradientBrush x:Key="BattleCommandPanelBackground" StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#FFF6F8FF" Offset="0"/>
+                    <GradientStop Color="#FFEBF0FF" Offset="1"/>
+                </LinearGradientBrush>
+                <!-- ===== 戰鬥指令按鈕：仙劍風底板 ===== -->
+                <Style x:Key="BattleActionButtonBaseStyle"
+                       TargetType="Button"
+                       BasedOn="{StaticResource StoryChoiceButtonStyle}"/>
 
                 <!-- 攻擊：略帶紅銅色 -->
                 <Style x:Key="BattleAttackButtonStyle"
@@ -656,94 +600,10 @@
                                 BorderThickness="1">
 
                                 <UniformGrid x:Name="BattleChoicesPanel"
-                                     Columns="2"
-                                     HorizontalAlignment="Center"
-                                     VerticalAlignment="Center"
-                                     Margin="8">    
-
-                                    <!-- 仙劍風格・窄版指令按鈕樣式 -->
-                                    <UniformGrid.Resources>
-                                        <Style TargetType="Button">
-                                            <!-- 讓每張指令卡比較窄一點 -->
-                                            <Setter Property="Width" Value="170"/>
-                                            <Setter Property="Margin" Value="6,5"/>
-                                            <Setter Property="Height" Value="70"/>
-                                            <Setter Property="HorizontalAlignment" Value="Center"/>
-                                            <Setter Property="VerticalAlignment" Value="Center"/>
-
-                                            <!-- 底色：淡紙張漸層，有一點古風感 -->
-                                            <Setter Property="Background">
-                                                <Setter.Value>
-                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                        <GradientStop Color="#FFF8F5EE" Offset="0"/>
-                                                        <GradientStop Color="#FFE9E1D2" Offset="1"/>
-                                                    </LinearGradientBrush>
-                                                </Setter.Value>
-                                            </Setter>
-
-                                            <!-- 邊框：淡墨色，像卷軸邊框 -->
-                                            <Setter Property="BorderBrush" Value="#FF9A8F7A"/>
-                                            <Setter Property="BorderThickness" Value="1.4"/>
-
-                                            <!-- 文字預設，如果你裡面自己放 StackPanel 會照你的為主 -->
-                                            <Setter Property="Foreground" Value="#FF333333"/>
-                                            <Setter Property="FontSize" Value="18"/>
-                                            <Setter Property="FontWeight" Value="SemiBold"/>
-
-                                            <!-- 自訂模板：保留 ContentPresenter，不破壞你原本的內容排版 -->
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="Button">
-                                                        <Border x:Name="btnBorder"
-                                    Background="{TemplateBinding Background}"
-                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="10">
-                                                            <ContentPresenter HorizontalAlignment="Center"
-                                                  VerticalAlignment="Center"
-                                                  Margin="6"/>
-                                                        </Border>
-                                                        <ControlTemplate.Triggers>
-                                                            <!-- 滑鼠移上去：略微加深，帶一點金色邊 -->
-                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter TargetName="btnBorder" Property="Background">
-                                                                    <Setter.Value>
-                                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                            <GradientStop Color="#FFFCF7EE" Offset="0"/>
-                                                                            <GradientStop Color="#FFEFE0C8" Offset="1"/>
-                                                                        </LinearGradientBrush>
-                                                                    </Setter.Value>
-                                                                </Setter>
-                                                                <Setter TargetName="btnBorder" Property="BorderBrush" Value="#FFB48A4B"/>
-                                                            </Trigger>
-
-                                                            <!-- 按下去：顏色再深一點，像是木牌被壓下去 -->
-                                                            <Trigger Property="IsPressed" Value="True">
-                                                                <Setter TargetName="btnBorder" Property="Background">
-                                                                    <Setter.Value>
-                                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                            <GradientStop Color="#FFEAD6BA" Offset="0"/>
-                                                                            <GradientStop Color="#FFD7B58C" Offset="1"/>
-                                                                        </LinearGradientBrush>
-                                                                    </Setter.Value>
-                                                                </Setter>
-                                                                <Setter TargetName="btnBorder" Property="BorderBrush" Value="#FF8C6436"/>
-                                                            </Trigger>
-
-                                                            <!-- 不能點時：灰一點 -->
-                                                            <Trigger Property="IsEnabled" Value="False">
-                                                                <Setter TargetName="btnBorder" Property="Background" Value="#FFE7E3DB"/>
-                                                                <Setter TargetName="btnBorder" Property="BorderBrush" Value="#FFB7B1A6"/>
-                                                                <Setter Property="Foreground" Value="#FF9E988D"/>
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Style>
-                                    </UniformGrid.Resources>
-
-                                </UniformGrid>
+                                             Columns="2"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center"
+                                             Margin="8"/>
                             </Border>
                         </Grid>
                     </Border>

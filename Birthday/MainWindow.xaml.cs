@@ -663,27 +663,27 @@ namespace Birthday
 
 
         // 劇情模式的指令清單（仙劍風）
+        // 劇情模式的指令清單：改用 StoryChoicesPanel + 仙劍風 Style
         private void RenderStoryChoices(StoryStep step)
         {
-            // 先清空舊按鈕
+            // 清空舊的選項按鈕
             StoryChoicesPanel.Children.Clear();
 
-            // 有選項 → 顯示一整排仙劍風按鈕
+            // 有選項的情況 → 顯示一整排指令按鈕
             if (step?.Choices != null && step.Choices.Count > 0)
             {
-                // 劇情有選項時，「下一句」按鈕先藏起來
+                // 劇情有選項時，先把「下一句」按鈕藏起來
                 StoryNextButton.Visibility = Visibility.Collapsed;
 
-                // 拿仙劍風 Style
-                var storyButtonStyle =
-                    TryFindResource("StoryChoiceButtonStyle") as Style;
+                // 拿劇情專用 Style（外觀仙劍風）
+                var storyButtonStyle = TryFindResource("StoryChoiceButtonStyle") as Style;
 
                 foreach (var choice in step.Choices)
                 {
                     var btn = new Button
                     {
                         Tag = choice.NextId,
-                        // 內容就用文字，外觀全部交給 Style
+                        // 內容就是選項文字，外觀交給 Style 控制
                         Content = choice.Text ?? string.Empty,
                         Margin = new Thickness(0, 6, 0, 6),
                         HorizontalAlignment = HorizontalAlignment.Stretch
@@ -696,7 +696,7 @@ namespace Birthday
 
                     btn.Click += StoryChoiceButton_Click;
 
-                    // ✅ 關鍵：加到 StoryChoicesPanel，不再碰 BattleChoicesPanel
+                    // ✅ 關鍵：加到「StoryChoicesPanel」，不再碰 BattleChoicesPanel
                     StoryChoicesPanel.Children.Add(btn);
                 }
             }
@@ -758,38 +758,46 @@ namespace Birthday
             }
         }
 
+        private Style? FindBattleResourceStyle(string key)
+        {
+            // Use the battle layout scope first so we can pick up resources defined
+            // inside the battle layer instead of only window-level resources.
+            return BattleLayout.TryFindResource(key) as Style
+                   ?? TryFindResource(key) as Style;
+        }
+
         private Style? ResolveBattleActionStyle(string? text, int index)
         {
             var normalized = (text ?? string.Empty).Replace('：', ':').ToLowerInvariant();
 
             if (normalized.Contains("防禦"))
             {
-                return TryFindResource("BattleDefenseButtonStyle") as Style;
+                return FindBattleResourceStyle("BattleDefenseButtonStyle");
             }
 
             if (normalized.Contains("攻擊"))
             {
-                return TryFindResource("BattleAttackButtonStyle") as Style;
+                return FindBattleResourceStyle("BattleAttackButtonStyle");
             }
 
             if (normalized.Contains("風剪"))
             {
-                return TryFindResource("BattleSkill1ButtonStyle") as Style;
+                return FindBattleResourceStyle("BattleSkill1ButtonStyle");
             }
 
             if (normalized.Contains("霜鎖") || normalized.Contains("霜锁"))
             {
-                return TryFindResource("BattleSkill2ButtonStyle") as Style;
+                return FindBattleResourceStyle("BattleSkill2ButtonStyle");
             }
 
             if (normalized.Contains("影縛") || normalized.Contains("影缚"))
             {
-                return TryFindResource("BattleSkill3ButtonStyle") as Style;
+                return FindBattleResourceStyle("BattleSkill3ButtonStyle");
             }
 
             if (normalized.Contains("雷踏"))
             {
-                return TryFindResource("BattleSkill4ButtonStyle") as Style;
+                return FindBattleResourceStyle("BattleSkill4ButtonStyle");
             }
 
             if (index >= 2 && index <= 5)
@@ -802,12 +810,10 @@ namespace Birthday
                     "BattleSkill3ButtonStyle",
                     "BattleSkill4ButtonStyle"
                 };
-
                 var styleKey = skillStyles[index % skillStyles.Length];
-                return TryFindResource(styleKey) as Style;
+                return FindBattleResourceStyle(styleKey);
             }
-
-            return TryFindResource("BattleUtilityButtonStyle") as Style;
+            return FindBattleResourceStyle("BattleUtilityButtonStyle");
         }
 
         private BattleActionKind GetBattleActionKind(string? text, int index)
@@ -842,16 +848,13 @@ namespace Birthday
         {
             var button = new Button
             {
-                Margin = new Thickness(8, 6, 8, 6),
-                MinHeight = 80,
-                MinWidth = 180,
                 Tag = choice.NextId,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 VerticalAlignment = VerticalAlignment.Stretch
             };
 
             button.Style = ResolveBattleActionStyle(choice.Text, index)
-                           ?? TryFindResource("BattleActionButtonBaseStyle") as Style;
+                           ?? FindBattleResourceStyle("BattleActionButtonBaseStyle");
             button.Content = CreateBattleChoiceContent(choice.Text ?? string.Empty);
             button.Click += StoryChoiceButton_Click;
 
@@ -862,16 +865,13 @@ namespace Birthday
         {
             var skillButton = new Button
             {
-                Margin = new Thickness(8, 6, 8, 6),
-                MinHeight = 80,
-                MinWidth = 180,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 VerticalAlignment = VerticalAlignment.Stretch,
                 Content = CreateBattleChoiceContent("技能: 展開招式")
             };
 
-            skillButton.Style = TryFindResource("BattleSkill1ButtonStyle") as Style
-                                ?? TryFindResource("BattleActionButtonBaseStyle") as Style;
+            skillButton.Style = FindBattleResourceStyle("BattleSkill1ButtonStyle")
+                                ?? FindBattleResourceStyle("BattleActionButtonBaseStyle");
 
             var menu = BuildSkillMenu(skillChoices);
 
@@ -893,8 +893,8 @@ namespace Birthday
                 Placement = PlacementMode.Bottom,
                 StaysOpen = false,
                 MinWidth = 360,
-                Background = new SolidColorBrush(Color.FromArgb(0xF2, 0xF8, 0xFA, 0xFF)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(0x8C, 0xA4, 0xE6)),
+                Background = new SolidColorBrush(Color.FromArgb(0xF0, 0x24, 0x2C, 0x45)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0xCB, 0xB3, 0x7E)),
                 BorderThickness = new Thickness(1.2),
                 HasDropShadow = true
             };
@@ -912,7 +912,7 @@ namespace Birthday
                     Header = CreateBattleChoiceContent(choice.Text ?? string.Empty),
                     Padding = new Thickness(4),
                     Margin = new Thickness(6, 4, 6, 4),
-                    Foreground = new SolidColorBrush(Color.FromRgb(0x0A, 0x0D, 0x18)),
+                    Foreground = new SolidColorBrush(Color.FromRgb(0xFD, 0xF9, 0xF0)),
                     Background = Brushes.Transparent,
                     BorderBrush = Brushes.Transparent,
                 };
@@ -977,7 +977,7 @@ namespace Birthday
                 TextAlignment = TextAlignment.Center,
                 FontSize = 20,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x0A, 0x0D, 0x18))
+                Foreground = new SolidColorBrush(Color.FromRgb(0xFD, 0xF9, 0xF0))
             });
 
             if (!string.IsNullOrWhiteSpace(detail))
@@ -989,7 +989,7 @@ namespace Birthday
                     TextAlignment = TextAlignment.Center,
                     FontSize = 15,
                     Margin = new Thickness(0, 4, 0, 0),
-                    Foreground = new SolidColorBrush(Color.FromRgb(0x24, 0x2C, 0x45)),
+                    Foreground = new SolidColorBrush(Color.FromRgb(0xD7, 0xE1, 0xF9)),
                     Opacity = 0.9
                 });
             }
