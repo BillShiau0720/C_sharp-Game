@@ -422,7 +422,8 @@ namespace Birthday
                 new BattleFighter { Name = "豹豹", MaxHp = 95, Attack = 26, Defense = 12, SupportRatio = 0.9 },
                 new BattleFighter { Name = "黑袍首領", MaxHp = 180, Attack = 26, Defense = 12 },
                 System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "Audio", "BGM", "Final Boss Battle.mp3"),
-                "決戰天璇峰：連攜武功削弱魔焰，輪流出手直至勝負。"
+                "決戰天璇峰：連攜武功削弱魔焰，輪流出手直至勝負。",
+                true
             );
         }
 
@@ -834,7 +835,8 @@ namespace Birthday
             BattleFighter Ally,
             BattleFighter Enemy,
             string? BattleBgm,
-            string IntroPrompt);
+            string IntroPrompt,
+            bool EnemyHasSkill = false);
 
         private sealed class BattleSession
         {
@@ -952,8 +954,41 @@ namespace Birthday
 
             private void ApplyEnemyTurn(StringBuilder log)
             {
+                if (Definition.EnemyHasSkill)
+                {
+                    ApplyBossSkillTurn(log);
+                    return;
+                }
+
+                ApplyBasicEnemyStrike(log, 1.0, "敵方猛攻");
+            }
+
+            private void ApplyBossSkillTurn(StringBuilder log)
+            {
+                // 奇數回合：魔焰斬，重傷並灼燒防禦。
+                if (Turn % 2 == 1)
+                {
+                    ApplyBasicEnemyStrike(log, 1.25, "黑袍首領施放『魔焰斬』");
+                    Enemy.AttackModifier = Math.Min(Enemy.AttackModifier + 1, 6);
+                    Player.DefenseModifier = Math.Max(Player.DefenseModifier - 1, -6);
+                    log.AppendLine("魔焰灼燒護甲，敵方攻擊上升，我方防禦下降。");
+                    return;
+                }
+
+                // 偶數回合：煉獄衝擊，波及隊友。
+                var primaryDamage = ApplyBasicEnemyStrike(log, 1.1, "黑袍首領的『煉獄衝擊』");
+                if (Ally.CurrentHp > 0)
+                {
+                    var splash = Math.Max(3, (int)Math.Round(primaryDamage * 0.5));
+                    Ally.CurrentHp = Math.Max(0, Ally.CurrentHp - splash);
+                    log.AppendLine($"餘焰波及 {Ally.Name}，造成 {splash} 點傷害。");
+                }
+            }
+
+            private int ApplyBasicEnemyStrike(StringBuilder log, double multiplier, string title)
+            {
                 var target = Player;
-                var damage = CalculateDamage(Enemy, target, 1.0);
+                var damage = CalculateDamage(Enemy, target, multiplier);
 
                 if (PlayerGuarding)
                 {
@@ -963,7 +998,9 @@ namespace Birthday
                 }
 
                 target.CurrentHp = Math.Max(0, target.CurrentHp - damage);
-                log.AppendLine($"敵方猛攻，{target.Name} 受到 {damage} 點傷害。");
+                log.AppendLine($"{title}，{target.Name} 受到 {damage} 點傷害。");
+
+                return damage;
             }
 
             private void ApplyAttack(BattleFighter attacker, BattleFighter target, double multiplier, StringBuilder log, string title)
