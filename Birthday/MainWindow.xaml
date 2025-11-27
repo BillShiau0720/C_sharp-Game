@@ -264,9 +264,8 @@
 
             <!-- ===== 戰鬥畫面層 ===== -->
             <Grid x:Name="BattleLayout"
-                  Visibility="Collapsed"
                   Panel.ZIndex="21"
-                  Background="#FF05060D">
+                  Background="#FF05060D" Visibility="Collapsed">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
@@ -280,10 +279,10 @@
                 <Border Grid.RowSpan="2" Background="#66000000"/>
 
                 <Grid x:Name="BattleCharacterLayer"
-                      Grid.RowSpan="2"
-                      Panel.ZIndex="1"
+                      Grid.Row="0"
+                      Panel.ZIndex="4"
                       IsHitTestVisible="False"
-                      Margin="40,40,40,220">
+                      Margin="40,40,40,120">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="1*"/>
                         <ColumnDefinition Width="1*"/>
@@ -298,26 +297,26 @@
                         </Grid.ColumnDefinitions>
                         <Image x:Name="BattlePlayerAvatar"
                                Grid.Column="0"
-                               Height="420"
-                               Stretch="Uniform"
-                               HorizontalAlignment="Left"
-                               VerticalAlignment="Bottom"
-                               Margin="80,0,0,0"
-                               Opacity="0.95"/>
-                        <Image x:Name="BattleAllyAvatar"
-                               Grid.Column="1"
                                Height="340"
                                Stretch="Uniform"
                                HorizontalAlignment="Left"
                                VerticalAlignment="Bottom"
-                               Margin="48,0,0,0"
+                               Margin="60,0,0,0"
+                               Opacity="0.95"/>
+                        <Image x:Name="BattleAllyAvatar"
+                               Grid.Column="1"
+                               Height="280"
+                               Stretch="Uniform"
+                               HorizontalAlignment="Left"
+                               VerticalAlignment="Bottom"
+                               Margin="40,0,0,0"
                                Opacity="0.9"/>
                     </Grid>
 
                     <Grid Grid.Column="1"
                           Margin="40,20,40,20">
                         <Image x:Name="BattleEnemyAvatar"
-                               Height="520"
+                               Height="420"
                                Stretch="Uniform"
                                HorizontalAlignment="Right"
                                VerticalAlignment="Bottom"

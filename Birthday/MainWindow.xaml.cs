@@ -628,7 +628,7 @@ namespace Birthday
                     return;
                 }
 
-                if (_activeBattle != null && _currentStep?.UseBattleLayout == true)
+                if (_currentStep?.UseBattleLayout == true && EnsureBattleSession())
                 {
                     ExecuteBattleAction(choice);
                     return;
@@ -1121,6 +1121,21 @@ namespace Birthday
             }
         }
 
+        private bool EnsureBattleSession()
+        {
+            if (_activeBattle != null)
+            {
+                return true;
+            }
+
+            if (_currentStep?.UseBattleLayout == true)
+            {
+                TryStartBattle(_currentStep);
+            }
+
+            return _activeBattle != null;
+        }
+
         private void RefreshBattleHealthFromState()
         {
             if (_activeBattle == null)
@@ -1263,17 +1278,10 @@ namespace Birthday
 
             skillButton.Click += (s, e) =>
             {
-                if (_currentStep?.UseBattleLayout == true && _isTypewriting)
-                {
-                    return;
-                }
-
-                if (FinishTypewriterEarly())
-                    return;
+                FinishTypewriterEarly();
 
                 OpenSkillMenu(skillButton, menu);
             };
-
             return skillButton;
         }
 
@@ -1342,7 +1350,7 @@ namespace Birthday
                     {
                         return;
                     }
-                    if (_activeBattle != null)
+                    if (EnsureBattleSession())
                     {
                         ExecuteBattleAction(choice);
                         return;
